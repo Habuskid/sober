@@ -1,5 +1,6 @@
 # Sober 🍸
-> **Clear-headed pre-payment safety and counterparty risk verification for AI agents on PayBox.**
+
+> **Clear-headed pre-payment safety and counterparty risk checks for AI agents on PayBox.**
 
 [![PayBox Plugin](https://img.shields.io/badge/PayBox-Plugin%20v1.0.2-blue?style=for-the-badge&logo=shield)](https://developer.paybox.sh/)
 [![Protocol](https://img.shields.io/badge/MCP-2026--07--28-blueviolet?style=for-the-badge)](https://modelcontextprotocol.io/)
@@ -10,178 +11,167 @@
 
 ---
 
-## 📌 Executive Summary
+## 🧭 What is Sober?
 
-As autonomous AI agents acquire wallet capabilities and begin purchasing web services via the **HTTP 402 Payment Required (x402)** protocol, they expose users to severe economic and infrastructural vulnerabilities. Agents cannot inherently distinguish between a legitimate payment gateway, a phishing drainer, an SSRF loopback trap, or a broken endpoint.
+Autonomous AI agents can now connect directly to crypto wallets and buy web services using the **x402 (HTTP 402 Payment Required)** standard. 
 
-**Sober** acts as an intelligent pre-payment firewall for PayBox. Before an agent can propose or sign an x402 payment, Sober performs multi-layered static and active pre-flight checks. Only when an endpoint is proven secure and compliant does Sober generate an official, standard `io.paybox/transactionProposal` ready for user approval.
+However, AI agents are naive:
+- They cannot tell if a URL is a real service or a malicious scam.
+- They can easily be tricked into paying local machines, private cloud addresses, or fake websites.
+- They will happily spend your money even if the destination page returns a 404 error or broken code.
 
----
+**Sober** acts like a smart firewall for agent spending on **PayBox**. Before an agent pays for any web link, Sober scans the target URL, tests the counterparty, and determines whether it is safe.
 
-## 🚨 The Problem
+If the link looks risky or dangerous, Sober immediately **blocks** it. 
 
-Recent 2026 security research into agentic payment systems (*arXiv:2605.30998*, *arXiv:2605.11781*, *arXiv:2607.19545*) documents critical failure modes in autonomous x402 facilitators:
-
-1. **SSRF & Internal Drainage**: Agents can be prompted or tricked into calling `127.0.0.1`, `localhost`, or cloud metadata services (`169.254.169.254`), exposing internal microservices and leaking credentials.
-2. **Cross-Resource Substitution**: Malicious endpoints accept payment for Resource A while redirecting (`HTTP 301/302/307`) to Resource B or empty content.
-3. **Ghost Settlements**: Agents paying endpoints that return `HTTP 404` or `500`, permanently burning tokens with zero goods returned.
-4. **Credential Leakage**: Sensitive basic-auth credentials or tokens embedded directly in URLs.
-5. **Protocol Downgrade**: Insecure, unencrypted `http://` transport exposing payment metadata to man-in-the-middle attacks.
-
-PayBox provides secure execution rails, vault storage, and passkey approvals—**but PayBox plugins only execute what agents propose.** Sober fills the missing pre-payment verification layer.
+If the link is verified and safe, Sober creates an official PayBox transaction proposal so you can review and approve the payment with peace of mind.
 
 ---
 
-## 💡 The Solution: How Sober Protects Agents
+## ⚠️ The Problem: Why Agents Need Protection
 
-Sober intercepts the payment intent and performs a 7-tier verification pipeline before any transaction proposal is constructed:
+When agents pay for APIs and services automatically, they face real security risks documented in recent web research:
+
+1. 🕳️ **Private Network & Server Hijacking (SSRF)**: Bad actors can trick an agent into calling `127.0.0.1`, `localhost`, or internal cloud IP addresses (`169.254.169.254`), attacking private internal infrastructure.
+2. 🔀 **Bait and Switch (Redirect Traps)**: An endpoint takes payment for Item A, but immediately redirects the agent to an empty or malicious Item B.
+3. 💸 **Ghost Payments**: The agent sends real crypto to a server that returns a 404 Not Found or a 500 Server Error, burning funds without receiving any data.
+4. 🔓 **Leaked Passwords**: Links with sensitive passwords or API keys typed into the URL address itself.
+5. 🌐 **Insecure Networks**: Unencrypted `http://` connections that allow eavesdroppers to steal or tamper with transactions.
+
+PayBox gives agents a secure wallet and approval screen, but PayBox plugins only execute what agents propose. **Sober stops bad proposals before money is ever placed at risk.**
+
+---
+
+## 🛡️ How Sober Works
+
+When an agent wants to pay for a service, Sober runs a 7-step safety pipeline:
 
 ```mermaid
 flowchart TD
-    A["Agent Requests Payment (URL + Budget)"] --> B{"Sober Pre-Flight Engine"}
+    A["Agent Wants to Pay (URL + Budget)"] --> B{"Sober Safety Engine"}
     
-    subgraph PreFlightChecks["Sober 7-Tier Security Inspection"]
-        B --> C1["1. HTTPS Scheme (Port 443 Required)"]
-        B --> C2["2. Credential Leak Check (No userinfo)"]
-        B --> C3["3. SSRF & Private IP Guard (RFC 1918 / Loopback)"]
-        B --> C4["4. Threat Intelligence Watchlist & Heuristics"]
-        B --> C5["5. Bounded Live Probe (Timeout 3.5s)"]
-        B --> C6["6. Anti-Redirection Guard (arXiv:2605.11781)"]
-        B --> C7["7. Live HTTP 402 Challenge Validation"]
+    subgraph Pipeline["7 Step Inspection"]
+        B --> C1["1. HTTPS Check: Must use secure Port 443"]
+        B --> C2["2. Credential Check: No passwords in URL"]
+        B --> C3["3. SSRF Protection: No local or private IPs"]
+        B --> C4["4. Threat Watchlist: Check phishing patterns"]
+        B --> C5["5. Live Probe: Fast 3.5s connection check"]
+        B --> C6["6. Anti-Redirect: Reject bait-and-switch traps"]
+        B --> C7["7. Live 402 Check: Confirm active payment terms"]
     end
     
-    C1 -->|Fail| D["VERDICT: BLOCK"]
-    C2 -->|Fail| D
-    C3 -->|Fail| D
-    C4 -->|Fail| D
+    C1 -->|Failed| D["VERDICT: BLOCK"]
+    C2 -->|Failed| D
+    C3 -->|Failed| D
+    C4 -->|Failed| D
     
-    C5 -->|Redirect / 404 / 500| E["VERDICT: WARN"]
+    C5 -->|Warning / 404 / 500| E["VERDICT: WARN"]
     
-    C7 -->|402 Verified Safe| F["VERDICT: SAFE"]
+    C7 -->|Safe & Verified| F["VERDICT: SAFE"]
     
-    D --> G["Return Warning & Explanations\n(NO Transaction Proposal Created)"]
-    E --> H["Construct PayBox x402 Proposal with Warnings"]
-    F --> I["Construct PayBox x402 Proposal (Base USDC)"]
+    D --> G["Payment Blocked (No Transaction Created)"]
+    E --> H["Create PayBox Proposal with Warning Attached"]
+    F --> I["Create Official Base USDC PayBox Proposal"]
     
-    I --> J["PayBox Transaction Window / User Passkey Approval"]
+    I --> J["User Approves in PayBox Wallet"]
 ```
 
 ---
 
-## 🏗️ Architecture & Interaction Flow
+## 🏛️ System Architecture
 
-Sober integrates directly into the PayBox Model Context Protocol (MCP) ecosystem:
+Here is how the user, the AI agent, Sober, and PayBox talk to each other:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User
-    participant LLM as AI Agent (ChatGPT / Claude)
-    participant PayBox as PayBox Host / MCP Bridge
-    participant Sober as Sober Plugin (Sandbox)
-    participant Endpoint as External x402 Service
+    actor User as 👤 User
+    participant Agent as 🤖 AI Agent (ChatGPT or Claude)
+    participant PayBox as 💼 PayBox MCP Bridge
+    participant Sober as 🍸 Sober Plugin (Sandbox)
+    participant Service as 🌐 External Paid Service
     
-    User->>LLM: "Pay 0.05 USDC to service for repository data"
-    LLM->>PayBox: discover_plugins()
-    PayBox-->>LLM: returns ["sober"]
+    User->>Agent: "Pay 0.05 USDC to get data from this service"
+    Agent->>PayBox: discover_plugins()
+    PayBox-->>Agent: Returns enabled plugin list with "sober"
     
     rect rgb(30, 40, 60)
-    Note over LLM,Sober: Pre-Payment Safety Check
-    LLM->>PayBox: use_plugin(tool: "propose_checked_payment", input: {url, maxAmount})
-    PayBox->>Sober: Invokes isolated sandboxed runner
-    Sober->>Sober: Static Analysis (SSRF, HTTPS, Credentials, Threat lists)
-    Sober->>Endpoint: Bounded Pre-Flight Probe (3.5s)
-    Endpoint-->>Sober: HTTP 402 Payment Required Challenge
-    Sober->>Sober: Evaluate response & terms
-    Sober-->>PayBox: Returns { verdict: "safe", io.paybox/transactionProposal }
+    Note over Agent,Sober: Pre-Payment Safety Check
+    Agent->>PayBox: use_plugin(propose_checked_payment)
+    PayBox->>Sober: Starts secure sandbox check
+    Sober->>Sober: Checks protocol, IP range, and credentials
+    Sober->>Service: Quick 3.5s probe to check status
+    Service-->>Sober: Returns HTTP 402 with price details
+    Sober->>Sober: Validates terms match Base USDC
+    Sober-->>PayBox: Returns verdict SAFE and transaction proposal
     end
     
-    PayBox->>PayBox: Validate challenge terms against Base USDC
-    PayBox->>User: Prompts approval: "Approve 0.002 USDC to glim.sh on Base?"
-    User->>PayBox: Signs with Passkey / Wallet
-    PayBox->>Endpoint: Submits payment & retrieves data
-    Endpoint-->>PayBox: 200 OK + Payload
-    PayBox-->>LLM: Delivers paid response
-    LLM-->>User: Answers with verified service data
+    PayBox->>User: Displays approval card: "Approve 0.002 USDC on Base?"
+    User->>PayBox: Confirms payment with passkey or wallet
+    PayBox->>Service: Delivers payment and receives data
+    Service-->>PayBox: HTTP 200 OK with requested data
+    PayBox-->>Agent: Sends back clean service data
+    Agent-->>User: Answers with completed results
 ```
 
 ---
 
-## 🛠️ MCP Tools Provided
+## 🧰 Available Tools
 
-### 1. `check_service` (Read-Only Safety Inspection)
-Performs non-transactional pre-flight inspection and counterparty risk evaluation on an x402 URL.
-- **Input**:
-  - `url` (*string, required*): The target service URL.
-  - `method` (*"GET" | "POST", optional*): HTTP method (default: `"GET"`).
-  - `body` (*json, optional*): Request payload.
-- **Output**:
-  ```json
-  {
-    "verdict": "safe" | "warn" | "block",
-    "reasons": ["string"],
-    "sources": ["string"],
-    "hostname": "string"
-  }
-  ```
+Sober gives AI agents two simple, powerful tools:
 
-### 2. `propose_checked_payment` (Guarded Transaction Proposal)
-Runs the complete safety verification pipeline. If the target is safe or warning-cleared, it generates an official PayBox Base USDC transaction proposal (`io.paybox/transactionProposal`). **If blocked, proposal generation is suppressed entirely.**
-- **Input**:
-  - `url` (*string, required*): The target service URL.
-  - `maxAmount` (*string, required*): Atomic USDC maximum spend (e.g. `"50000"` = 0.05 USDC).
-  - `method` (*"GET" | "POST", optional*): HTTP method.
-  - `body` (*json, optional*): Request payload.
-- **Output**:
-  ```json
-  {
-    "verdict": "safe" | "warn" | "block",
-    "reasons": ["string"],
-    "sources": ["string"],
-    "hostname": "string",
-    "io.paybox/transactionProposal": {
-      "version": "1",
-      "kind": "x402",
-      "chain": "eip155:8453",
-      "expiresAt": "2026-10-17T18:30:00Z",
-      "request": { "url": "...", "method": "POST", "body": { ... } },
-      "payment": {
-        "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-        "maxAmount": "50000"
-      }
-    }
-  }
-  ```
+### 1. `check_service` (Safety Scanner)
+Scans any web link and returns a detailed risk report without creating any payment.
+- **Inputs**:
+  - `url` (*required*): The web link you want to check.
+  - `method` (*optional*): GET or POST (default is GET).
+  - `body` (*optional*): Any JSON payload you plan to send.
+- **Outputs**:
+  - `verdict`: `"safe"`, `"warn"`, or `"block"`
+  - `reasons`: Clear explanation of any risks found
+  - `sources`: Security rules that evaluated the link
+  - `hostname`: The clean domain name of the destination
+
+### 2. `propose_checked_payment` (Safe Payment Proposal)
+The main action tool. Runs the full safety check first. 
+- If the URL is **BLOCKED**, it refuses to create a transaction and explains why.
+- If the URL is **SAFE** or **WARN**, it generates an official PayBox Base USDC transaction proposal (`io.paybox/transactionProposal`) so you can sign it in your PayBox wallet.
+- **Inputs**:
+  - `url` (*required*): Target service endpoint.
+  - `maxAmount` (*required*): Spending limit in atomic USDC (for example: `"50000"` equals 0.05 USDC).
+  - `method` (*optional*): GET or POST.
+  - `body` (*optional*): JSON payload.
 
 ---
 
-## ⚡ Real-World Verification
+## 🧪 Live Tested Scenarios
 
-Sober was verified live in both the PayBox Developer Portal and live via ChatGPT connected to PayBox:
+Sober was tested against real-world situations:
 
-| Scenario | Input Target | Sober Action | Result |
+| Test Case | Destination URL | What Sober Did | Final Result |
 |---|---|---|---|
-| **SSRF / Localhost Attack** | `http://127.0.0.1:8080/drain` | Insecure protocol & loopback IP detected | **BLOCKED**. Zero funds at risk. |
-| **Cloud Metadata Leak** | `https://169.254.169.254/latest/meta-data` | Cloud link-local metadata address detected | **BLOCKED**. SSRF prevented. |
-| **Phishing / Drainer Pattern** | `https://crypto-drainer-service.com/pay` | Host matches known malicious threat pattern | **BLOCKED**. Counterparty rejected. |
-| **Live x402 Base Payment** | `POST https://glim.sh/api/v1/github/get` | Probed, confirmed live HTTP 402 challenge | **SAFE**. Proposal created & validated on Base USDC (`0x8335...`). |
+| 🚫 **Local Machine Attack (SSRF)** | `http://127.0.0.1:8080/drain` | Detected plain HTTP and private loopback address | **BLOCKED**: No money spent |
+| 🚫 **Cloud Metadata Attack** | `https://169.254.169.254/latest/meta-data` | Detected internal cloud server address | **BLOCKED**: Internal theft stopped |
+| 🚫 **Suspicious Drainer Domain** | `https://my-crypto-drainer-app.com/api` | Matched known risk pattern | **BLOCKED**: Untrusted site rejected |
+| ⚠️ **Free Website (Unnecessary Cost)** | `https://api.github.com` | Noticed server gives free 200 responses without 402 | **WARN**: Warns user not to waste money |
+| ✅ **Live Paid Service** | `POST https://glim.sh/api/v1/github/get` | Probed live server and verified valid 402 terms | **SAFE**: PayBox Base USDC proposal created |
 
 ---
 
-## 💻 Tech Stack & Standards
+## ⚙️ Tech Stack
 
-- **Runtime**: Node.js 24 (`v24.21.0`), pnpm `11.11.0`
-- **Language**: TypeScript 5.9 with strict typecheck
+- **Runtime**: Node.js 24 (`v24.21.0`) and pnpm `11.11.0`
+- **Language**: TypeScript 5.9 with strict type checking
 - **Protocol**: Model Context Protocol (Revision `2026-07-28`)
-- **Schema Validation**: Self-contained JSON Schema 2020-12 via Ajv 8
-- **Blockchain Rails**: Base mainnet (`eip155:8453`), USDC (`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`)
-- **Bundler**: esbuild single-file ESM bundle (`dist/plugin.mjs` ≤ 10 MiB, deterministic build)
+- **Schema Validation**: JSON Schema 2020-12 via Ajv 8
+- **Payment Network**: Base mainnet (`eip155:8453`) using USDC (`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`)
+- **Bundler**: esbuild single-file ESM bundle (`dist/plugin.mjs` at ~388 KiB)
 
 ---
 
-## 🚀 Development & Build
+## 🚀 Building Locally
 
-### 1. Install Dependencies
+### 1. Install Packages
 ```bash
 pnpm install --frozen-lockfile
 ```
@@ -191,14 +181,14 @@ pnpm install --frozen-lockfile
 pnpm run typecheck
 ```
 
-### 3. Build Plugin
+### 3. Build the Plugin Bundle
 ```bash
 pnpm run build
 ```
-Produces an optimized, self-contained single-file bundle at `dist/plugin.mjs` (~388 KiB).
+Builds the standalone `dist/plugin.mjs` file ready for PayBox upload.
 
 ---
 
-## 📄 License
+## 📜 License
 
-MIT License. Built for the **PayBox Chapter 1 Hackathon**.
+MIT License. Created for the **PayBox Chapter 1 Hackathon**.
