@@ -1,0 +1,6 @@
+{
+  "tool": "check_service",
+  "arguments": {
+    "url": "https://api.github.com"
+  }
+}
