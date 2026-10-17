@@ -4,7 +4,8 @@
 
 [![PayBox Plugin](https://img.shields.io/badge/PayBox-Plugin%20v1.0.2-blue?style=flat-square&logo=shield)](https://developer.paybox.sh/)
 [![Protocol](https://img.shields.io/badge/MCP-2026--07--28-blueviolet?style=flat-square)](https://modelcontextprotocol.io/)
-[![Network](https://img.shields.io/badge/Base-USDC%20(8453)-0052FF?style=flat-square&logo=coinbase)](https://base.org)
+[![Base](https://img.shields.io/badge/Base-USDC%20(8453)-0052FF?style=flat-square&logo=coinbase)](https://base.org)
+[![Solana](https://img.shields.io/badge/Solana-USDC%20(Mainnet)-14F195?style=flat-square&logo=solana)](https://solana.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-24.21.0-339933?style=flat-square&logo=node.js)](https://nodejs.org/)
 [![pnpm](https://img.shields.io/badge/pnpm-11.11.0-F69220?style=flat-square&logo=pnpm)](https://pnpm.io/)
@@ -164,7 +165,8 @@ Sober was tested against real-world situations:
 - **Language**: TypeScript 5.9 with strict type checking
 - **Protocol**: Model Context Protocol (Revision `2026-07-28`)
 - **Schema Validation**: JSON Schema 2020-12 via Ajv 8
-- **Payment Network**: Base mainnet (`eip155:8453`) using USDC (`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`)
+- **Payment Networks**: Base mainnet (`eip155:8453`) and Solana mainnet (`solana:mainnet`) using USDC
+- **Supported Assets**: Base USDC (`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`), Solana USDC (`EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`)
 - **Bundler**: esbuild single-file ESM bundle (`dist/plugin.mjs` at ~388 KiB)
 
 ---

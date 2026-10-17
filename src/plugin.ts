@@ -217,10 +217,11 @@ function createServer() {
     "propose_checked_payment",
     {
       title: "Propose checked x402 payment",
-      description: "Verifies service safety before generating a PayBox Base USDC x402 payment proposal. Rejects blocked targets.",
+      description: "Verifies service safety before generating a PayBox Base or Solana USDC x402 payment proposal. Rejects blocked targets.",
       inputSchema: z.object({
         url: z.url().max(2048),
         maxAmount: z.string().regex(/^[1-9][0-9]{0,19}$/),
+        chain: z.enum(["eip155:8453", "solana:mainnet"]).optional(),
         method: z.enum(["GET", "POST"]).optional(),
         body: z.json().optional(),
       }).strict(),
@@ -232,7 +233,7 @@ function createServer() {
         openWorldHint: true,
       },
     },
-    async ({ url, maxAmount, method = "GET", body }) => {
+    async ({ url, maxAmount, chain = "eip155:8453", method = "GET", body }) => {
       const safety = await assessUrlSafety(url, { method, body });
 
       if (safety.verdict === "block") {
@@ -252,9 +253,9 @@ function createServer() {
         };
       }
 
-      // Propose x402 payment on Base USDC with matching method and body
+      // Propose x402 payment on Base or Solana USDC with matching method and body
       const proposalResult = proposeX402({
-        chain: "eip155:8453",
+        chain,
         url,
         maxAmount,
         method,
@@ -265,7 +266,7 @@ function createServer() {
         content: [
           {
             type: "text",
-            text: `[${safety.verdict.toUpperCase()}] Sober approved payment proposal for ${safety.hostname}. ${proposalResult.content[0]!.text}`,
+            text: `[${safety.verdict.toUpperCase()}] Sober approved payment proposal on ${chain === "solana:mainnet" ? "Solana" : "Base"} for ${safety.hostname}. ${proposalResult.content[0]!.text}`,
           },
         ],
         structuredContent: {
